@@ -134,7 +134,7 @@ api.MapPost("/prescriptions", async (CreateRxDto d, ClaimsPrincipal p, AppDb db,
     await db.SaveChangesAsync();
     await audit.LogAsync(docId, "PRESCRIPTION_ISSUED", id);
 
-    var qr = JsonSerializer.Serialize(new QrEnvelope(json, sig, key.PublicKey), Json.Opts);
+    var qr = crypto.SealQr(JsonSerializer.Serialize(new QrEnvelope(json, sig, key.PublicKey), Json.Opts));
     return Results.Ok(new { prescriptionId = id, issuedAt = now, qrData = qr });
 }).RequireAuthorization("Doctor");
 

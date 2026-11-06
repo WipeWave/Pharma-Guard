@@ -52,7 +52,13 @@ public class VerificationService(AppDb db, CryptoService crypto, IConfiguration 
         static (VerifyResult, Guid?) Fail(string o, string m, Guid? id = null) => (new VerifyResult(o, m), id);
 
         QrEnvelope? env; RxPayload? px;
-        try { env = JsonSerializer.Deserialize<QrEnvelope>(qrData, Json.Opts); } catch { env = null; }
+        qrData = qrData.Trim();
+        if (!qrData.StartsWith(CryptoService.QrPrefix, StringComparison.Ordinal))
+            return Fail("Malformed", "This QR code is not a valid prescription.");
+        var opened = crypto.OpenQr(qrData);
+        if (opened is null)
+            return Fail("InvalidSignature", "This QR code failed authentication. It was altered, forged, or not issued by this system.");
+        try { env = JsonSerializer.Deserialize<QrEnvelope>(opened, Json.Opts); } catch { env = null; }
         if (env is null || string.IsNullOrEmpty(env.P) || string.IsNullOrEmpty(env.S) || string.IsNullOrEmpty(env.K))
             return Fail("Malformed", "This QR code is not a valid prescription.");
         try { px = JsonSerializer.Deserialize<RxPayload>(env.P, Json.Opts); } catch { px = null; }
